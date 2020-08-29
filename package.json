@@ -1,15 +1,15 @@
 {
   "name": "coleta-arquivos",
   "version": "1.0.0",
-  "description": "",
+  "description": "Coletor de Dockerfiles",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "node coletor-arquivos.js"
   },
   "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "author": "Lucas Mourão Ferreira",
+  "license": "MIT",
   "dependencies": {
     "axios": "^0.20.0"
   }
