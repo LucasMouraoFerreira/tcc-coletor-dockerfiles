@@ -11,6 +11,7 @@
   "author": "Lucas Mourão Ferreira",
   "license": "MIT",
   "dependencies": {
-    "axios": "^0.20.0"
+    "axios": "^0.20.0",
+    "docker-file-parser": "^1.0.5"
   }
 }
