@@ -36,7 +36,7 @@ async function coletaArquivos() {
     for (let index = 1; index <= totalPages; index += 1) {
       await axios
         .get(
-          `https://api.github.com/search/repositories?page=${index.toString()}&per_page=${perPage.toString()}&q=topic:docker+created:${start}..${end}`
+          `https://api.github.com/search/repositories?page=${index.toString()}&per_page=100&q=topic:docker+created:${start}..${end}`
         )
         .then(function (response) {
           const items = response.data.items;
