@@ -5,16 +5,16 @@ const dockerfileParser = require("docker-file-parser");
 
 const parseOptions = { includeComments: true };
 
-function getSizeInformation(fileContent) {
-  const sizeInBytes = Buffer.byteLength(fileContent, "utf8");
+function getSizeInformation(dockerfile) {
+  const sizeInBytes = Buffer.byteLength(dockerfile, "utf8");
 
   const totalNumberOfLines =
-    (fileContent.match(/\n|\r\n|\r/gm) || "").length + 1;
+    (dockerfile.match(/\n|\r\n|\r/gm) || "").length + 1;
 
-  const numberOfCommentLines = (fileContent.match(/^\s*#+/gm) || "").length;
+  const numberOfCommentLines = (dockerfile.match(/^\s*#+/gm) || "").length;
 
   const numberOfBlankLines =
-    (fileContent.match(/^\s*[\n\r]/gm) || "").length + 1;
+    (dockerfile.match(/^\s*[\n\r]/gm) || "").length + 1;
 
   return {
     sizeInBytes,
@@ -24,21 +24,14 @@ function getSizeInformation(fileContent) {
   };
 }
 
-function parseDockerfile(fileContent) {
-  return dockerfileParser.parse(fileContent, parseOptions);
-}
-
-function test() {
-  const fileContent = fs.readFileSync(
-    "/home/lucas/tcc/coleta-arquivos/Dockerfile",
-    { encoding: "utf-8" }
-  );
-
-  console.log(getSizeInformation(fileContent));
-  //console.log(parseDockerfile(fileContent));
-}
-
-test();
+exports.parseDockerfile = function parseDockerfile(dockerfile) {
+  const sizeInfo = getSizeInformation(dockerfile.dockerfile);
+  return {
+    ...sizeInfo,
+    dockerfile: dockerfileParser.parse(dockerfile.dockerfile, parseOptions),
+    year: dockerfile.year,
+  };
+};
 
 // informações para retirar do repositorio
 // fork? define se repositorio é um fork, language, stargazers_count, forks_count, size, full_name, owner.type ['User','Organization']

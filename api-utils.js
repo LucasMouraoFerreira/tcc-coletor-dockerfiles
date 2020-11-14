@@ -1,5 +1,17 @@
 const axios = require("axios");
 const { decode } = require("64");
+const { parseDockerfile } = require('./parser');
+
+const validYears = [
+  "2013",
+  "2014",
+  "2015",
+  "2016",
+  "2017",
+  "2018",
+  "2019",
+  "2020",
+];
 
 async function getRepoInfo(repositoryFullName) {
   await axios
@@ -23,7 +35,19 @@ async function getRepoInfo(repositoryFullName) {
         .get(
           `https://raw.githubusercontent.com/${repositoryFullName}/master/Dockerfile`
         )
-        .then(async () => {})
+        .then(async () => {
+          const dockerfiles = await getDockerfiles(repositoryFullName);
+          await save({ 
+            language,
+            stargazers_count,
+            forks_count,
+            size,
+            full_name,
+            open_issues_count,
+            ownerType
+          },
+            dockerfiles);
+        })
         .catch(() => {
           console.log(
             `repositorio ${repositoryFullName} não possui Dockerfile`
@@ -36,20 +60,75 @@ async function getRepoInfo(repositoryFullName) {
     });
 }
 
-async function getDockerfilesInfo(repositoryFullName) {
+async function getDockerfiles(repositoryFullName) {
   await axios
     .get(
       `https://api.github.com/repos/${repositoryFullName}/commits?path=Dockerfile&per_page=100&page=1`
     )
     .then(async (response) => {
-      console.log(response.data);
+      const commits = [...response.data];
+      if (commits.length === 100) {
+        let pendingCommits = true;
+        let page = 2;
+        while (pendingCommits) {
+          await axios
+            .get(
+              `https://api.github.com/repos/${repositoryFullName}/commits?path=Dockerfile&per_page=100&page=${page}`
+            )
+            .then((res) => {
+              commits.concat(res.data);
+              if (res.data.length < 100) {
+                pendingCommits = false;
+              }
+              page += 1;
+            });
+        }
+      }
+      return getDockerfilesInfo(commits);
     })
     .catch(() => {
       console.log(`Erro ao ler commits do Dockerfile - ${repositoryFullName}`);
     });
 }
 
-//getDockerfilesInfo();
+async function getDockerfilesInfo(commmits) {
+  const commitsToAnalyze = [];
+  validYears.forEach((year) => {
+    const commit = commmits.find(
+      (com) => com.commit.author.date.split("-")[0] === year
+    );
+    if (commit) {
+      commitsToAnalyze.push(commit);
+    }
+  });
+  commitsToAnalyze.map((com) => ({
+    year: com.commit.author.date.split("-")[0],
+    tree: com.commit.tree.url,
+  }));
+
+  return parseDockerfilesInfo(commitsToAnalyze);
+}
+
+async function parseDockerfilesInfo(commitsToAnalyze){
+  const dockerfiles = [];
+  commitsToAnalyze.forEach((commit) => {
+    await axios.get(tree).then((response) => {
+      const blobDockerfile = response.data.tree.find((blob) => blob.path === 'Dockerfile');
+      if(blobDockerfile){
+        await axios.get(blobDockerfile.url).then((res) => {
+          dockerfiles.push({year: commit.year, dockerfile: decodeDockerfile(res.data.content)});
+        });
+      }
+    });
+  });
+  return dockerfiles.map((dockerfile) => parseDockerfile(dockerfile));
+}
+
+function decodeDockerfile(content) {
+  const input = Buffer.from(content);
+
+  return decode(input).toString();
+}
 
 //commit.author.date
 //commit.tree.url -> chama api
@@ -57,8 +136,4 @@ async function getDockerfilesInfo(repositoryFullName) {
 //blob.url -> chama api
 //response.data.content-> decode content
 
-function decodeDockerfile(content) {
-  const input = Buffer.from(content);
-
-  return decode(input).toString();
-}
+function save(repoInfo, dockerfiles){}
