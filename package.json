@@ -13,6 +13,7 @@
   "dependencies": {
     "64": "^0.2.0",
     "axios": "^0.20.0",
-    "docker-file-parser": "^1.0.5"
+    "docker-file-parser": "^1.0.5",
+    "mongoose": "^5.10.14"
   }
 }

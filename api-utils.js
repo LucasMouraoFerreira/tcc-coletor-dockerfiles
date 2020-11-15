@@ -1,6 +1,15 @@
 const axios = require("axios");
 const { decode } = require("64");
 const { parseDockerfile } = require('./parser');
+const { token } = require('./token.json');
+const repoGeneralInfo = require('./database/models/repo-general-info');
+const dockerfileInfo = require('./database/models/dockerfile-info');
+
+exports.options = options;
+
+const options = {
+  headers: { Authorization: `Token ${token}` }
+};
 
 const validYears = [
   "2013",
@@ -13,9 +22,11 @@ const validYears = [
   "2020",
 ];
 
-async function getRepoInfo(repositoryFullName) {
+exports.getRepoInfo = async function getRepoInfo(repositoryFullName) {
   await axios
-    .get(`https://raw.githubusercontent.com/repos/${repositoryFullName}`)
+    .get(`https://raw.githubusercontent.com/repos/${repositoryFullName}`,
+    options
+    )
     .then(async (response) => {
       if (response.data.fork === true) {
         return;
@@ -63,7 +74,8 @@ async function getRepoInfo(repositoryFullName) {
 async function getDockerfiles(repositoryFullName) {
   await axios
     .get(
-      `https://api.github.com/repos/${repositoryFullName}/commits?path=Dockerfile&per_page=100&page=1`
+      `https://api.github.com/repos/${repositoryFullName}/commits?path=Dockerfile&per_page=100&page=1`,
+      options
     )
     .then(async (response) => {
       const commits = [...response.data];
@@ -73,7 +85,8 @@ async function getDockerfiles(repositoryFullName) {
         while (pendingCommits) {
           await axios
             .get(
-              `https://api.github.com/repos/${repositoryFullName}/commits?path=Dockerfile&per_page=100&page=${page}`
+              `https://api.github.com/repos/${repositoryFullName}/commits?path=Dockerfile&per_page=100&page=${page}`,
+              options
             )
             .then((res) => {
               commits.concat(res.data);
@@ -112,10 +125,10 @@ async function getDockerfilesInfo(commmits) {
 async function parseDockerfilesInfo(commitsToAnalyze){
   const dockerfiles = [];
   commitsToAnalyze.forEach((commit) => {
-    await axios.get(tree).then((response) => {
+    await axios.get(commit.tree, options).then((response) => {
       const blobDockerfile = response.data.tree.find((blob) => blob.path === 'Dockerfile');
       if(blobDockerfile){
-        await axios.get(blobDockerfile.url).then((res) => {
+        await axios.get(blobDockerfile.url, options).then((res) => {
           dockerfiles.push({year: commit.year, dockerfile: decodeDockerfile(res.data.content)});
         });
       }
@@ -136,4 +149,9 @@ function decodeDockerfile(content) {
 //blob.url -> chama api
 //response.data.content-> decode content
 
-function save(repoInfo, dockerfiles){}
+async function save(repoInfo, dockerfiles){
+  const generalInfo = await repoGeneralInfo.create(repoInfo);
+  dockerfiles.forEach((dockerfile) => {
+    await dockerfileInfo.create({repoInfo: generalInfo._id, ...dockerfile});
+  });  
+}

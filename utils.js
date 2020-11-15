@@ -9,7 +9,7 @@ exports.returnStartEndQueryDates = function returnStartEndQueryDates(
   const endDate = new Date(
     baseDate.getFullYear(),
     baseDate.getMonth(),
-    baseDate.getDate() + 15
+    baseDate.getDate() + 5
   );
   return {
     start: baseDate.toISOString(),

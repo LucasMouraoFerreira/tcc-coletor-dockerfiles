@@ -1,6 +1,5 @@
 "use strict";
 
-const fs = require("fs");
 const dockerfileParser = require("docker-file-parser");
 
 const parseOptions = { includeComments: true };
