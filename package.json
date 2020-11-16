@@ -5,13 +5,12 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node coletor-arquivos.js"
+    "start": "node collect-dockerfiles.js"
   },
   "keywords": [],
   "author": "Lucas Mourão Ferreira",
   "license": "MIT",
   "dependencies": {
-    "64": "^0.2.0",
     "axios": "^0.20.0",
     "docker-file-parser": "^1.0.5",
     "mongoose": "^5.10.14"
