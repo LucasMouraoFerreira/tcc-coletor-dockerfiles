@@ -53,15 +53,10 @@ async function collectDockerfiles() {
   }
 }
 
-async function main() {
-  const objInterval = setInterval(async function () {
-    
+async function collectLoop(){
+  while(`${currentYear}-${currentMonth}` !== '2020-11' ){
     await collectDockerfiles();
-
-    if (currentYear === 2020 && currentMonth === 7 && currentDay > 23) {
-      clearInterval(objInterval);
-    }
-  }, 60000);
+  }  
 }
 
-main();
+collectLoop();

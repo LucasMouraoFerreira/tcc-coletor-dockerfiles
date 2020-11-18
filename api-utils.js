@@ -36,6 +36,8 @@ exports.getRepoInfo = async function getRepoInfo(repositoryFullName) {
         size,
         full_name,
         open_issues_count,
+        created_at,
+        updated_at,
         owner: { type: ownerType },
       } = response.data;
 
@@ -54,15 +56,16 @@ exports.getRepoInfo = async function getRepoInfo(repositoryFullName) {
               full_name,
               open_issues_count,
               ownerType,
+              created_at,
+              updated_at,
             },
             dockerfiles
           );
         })
-        .catch((erro) => {
+        .catch(() => {
           console.log(
             `repositorio ${repositoryFullName} não possui Dockerfile`
           );
-          console.log(erro);
           return;
         });
     })
@@ -70,6 +73,8 @@ exports.getRepoInfo = async function getRepoInfo(repositoryFullName) {
       console.log(err);
       return;
     });
+
+  return;
 };
 
 async function getDockerfiles(repositoryFullName) {
@@ -111,6 +116,7 @@ async function getDockerfiles(repositoryFullName) {
       console.log(`Erro ao ler commits do Dockerfile - ${repositoryFullName}`);
       return;
     });
+
   return getDockerfilesInfo(commits);
 }
 
@@ -141,7 +147,6 @@ async function parseDockerfilesInfo(commitsToAnalyze) {
         const blobDockerfile = response.data.tree.find(
           (blob) => blob.path === "Dockerfile"
         );
-        console.log(blobDockerfile);
         if (blobDockerfile) {
           await axios
             .get(blobDockerfile.url, options)
