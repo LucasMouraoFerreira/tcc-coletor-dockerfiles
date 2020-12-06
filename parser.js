@@ -29,6 +29,7 @@ exports.parseDockerfile = function parseDockerfile(dockerfile) {
     ...sizeInfo,
     dockerfile: dockerfileParser.parse(dockerfile.dockerfile, parseOptions),
     year: dockerfile.year,
+    month: dockerfile.month,
   };
 };
 

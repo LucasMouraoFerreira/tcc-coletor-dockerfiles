@@ -21,6 +21,21 @@ const validYears = [
   "2020",
 ];
 
+const months = [
+  "01",
+  "02",
+  "03",
+  "04",
+  "05",
+  "06",
+  "07",
+  "08",
+  "09",
+  "10",
+  "11",
+  "12",
+];
+
 exports.getRepoInfo = async function getRepoInfo(repositoryFullName) {
   await axios
     .get(`https://api.github.com/repos/${repositoryFullName}`, options)
@@ -123,15 +138,20 @@ async function getDockerfiles(repositoryFullName) {
 async function getDockerfilesInfo(commits) {
   const commitsToAnalyze = [];
   validYears.forEach((year) => {
-    const commit = commits.find(
-      (com) => com.commit.author.date.split("-")[0] === year
-    );
-    if (commit) {
-      commitsToAnalyze.push(commit);
-    }
+    months.forEach((month) => {
+      const commit = commits.find(
+        (com) =>
+          com.commit.author.date.split("-")[0] === year &&
+          com.commit.author.date.split("-")[1] === month
+      );
+      if (commit) {
+        commitsToAnalyze.push(commit);
+      }
+    });
   });
   const commitsToReturn = commitsToAnalyze.map((com) => ({
     year: com.commit.author.date.split("-")[0],
+    month: com.commit.author.date.split("-")[1],
     tree: com.commit.tree.url,
   }));
 
@@ -153,6 +173,7 @@ async function parseDockerfilesInfo(commitsToAnalyze) {
             .then((res) => {
               dockerfiles.push({
                 year: commit.year,
+                month: commit.month,
                 dockerfile: decodeDockerfile(res.data.content),
               });
             })
