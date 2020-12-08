@@ -12,6 +12,8 @@ const dockerfileInfoSchema = new Schema({
   dockerfile: Array,
   year: String,
   month: String,
+  last: Boolean,
+  date: Date,
 });
 
 const dockerfileInfo = mongoose.model("dockerfileInfo", dockerfileInfoSchema);

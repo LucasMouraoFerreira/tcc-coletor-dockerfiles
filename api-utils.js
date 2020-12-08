@@ -40,7 +40,7 @@ exports.getRepoInfo = async function getRepoInfo(repositoryFullName) {
   await axios
     .get(`https://api.github.com/repos/${repositoryFullName}`, options)
     .then(async (response) => {
-      if (response.data.fork === true) {
+      if (response.data.fork === true || response.data.stargazers_count < 50) {
         return;
       }
 
@@ -53,7 +53,7 @@ exports.getRepoInfo = async function getRepoInfo(repositoryFullName) {
         open_issues_count,
         created_at,
         updated_at,
-        owner: { type: ownerType },
+        owner: { type: owner_type },
       } = response.data;
 
       await axios
@@ -70,7 +70,7 @@ exports.getRepoInfo = async function getRepoInfo(repositoryFullName) {
               size,
               full_name,
               open_issues_count,
-              ownerType,
+              owner_type,
               created_at,
               updated_at,
             },
@@ -137,6 +137,8 @@ async function getDockerfiles(repositoryFullName) {
 
 async function getDockerfilesInfo(commits) {
   const commitsToAnalyze = [];
+  let lastYear;
+  let lastMonth;
   validYears.forEach((year) => {
     months.forEach((month) => {
       const commit = commits.find(
@@ -146,13 +148,19 @@ async function getDockerfilesInfo(commits) {
       );
       if (commit) {
         commitsToAnalyze.push(commit);
+        lastMonth = commit.commit.author.date.split("-")[1];
+        lastYear = commit.commit.author.date.split("-")[0];
       }
     });
   });
   const commitsToReturn = commitsToAnalyze.map((com) => ({
     year: com.commit.author.date.split("-")[0],
     month: com.commit.author.date.split("-")[1],
+    date: com.commit.author.date,
     tree: com.commit.tree.url,
+    last:
+      com.commit.author.date.split("-")[0] === lastYear &&
+      com.commit.author.date.split("-")[1] === lastMonth,
   }));
 
   return parseDockerfilesInfo(commitsToReturn);
@@ -174,6 +182,8 @@ async function parseDockerfilesInfo(commitsToAnalyze) {
               dockerfiles.push({
                 year: commit.year,
                 month: commit.month,
+                last: commit.last,
+                date: commit.date,
                 dockerfile: decodeDockerfile(res.data.content),
               });
             })
@@ -197,12 +207,6 @@ function decodeDockerfile(content) {
 
   return input.toString("utf-8");
 }
-
-//commit.author.date
-//commit.tree.url -> chama api
-//response.data.tree[] -> blobDockerfile = find((commit) => commit.path === 'Dockerfile')
-//blob.url -> chama api
-//response.data.content-> decode content
 
 async function save(repoInfo, dockerfiles) {
   const generalInfo = await repoGeneralInfo.create(repoInfo);

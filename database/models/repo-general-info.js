@@ -7,7 +7,7 @@ const repoGeneralInfoSchema = new mongoose.Schema({
   size: Number,
   full_name: String,
   open_issues_count: Number,
-  ownerType: String,
+  owner_type: String,
   created_at: String,
   updated_at: String,
 });
