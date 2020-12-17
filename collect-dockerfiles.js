@@ -40,7 +40,7 @@ async function collectDockerfiles() {
           `https://api.github.com/search/repositories?page=${index.toString()}&per_page=100&q=topic:docker+created:${start}..${end}`,
           options
         )
-        .then(function (response) {
+        .then(async function (response) {
           const items = response.data.items;
 
           for (let i = 0; i < items.length; i += 1) {
@@ -53,10 +53,10 @@ async function collectDockerfiles() {
   }
 }
 
-async function collectLoop(){
-  while(`${currentYear}-${currentMonth}` !== '2020-11' ){
+async function collectLoop() {
+  while (`${currentYear}-${currentMonth}` !== "2021-01") {
     await collectDockerfiles();
-  }  
+  }
 }
 
 collectLoop();

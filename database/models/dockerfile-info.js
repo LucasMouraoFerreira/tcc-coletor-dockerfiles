@@ -1,4 +1,3 @@
-const { isValidObjectId } = require("mongoose");
 const mongoose = require("../index");
 const Schema = mongoose.Schema;
 const ObjectId = Schema.ObjectId;
@@ -14,6 +13,7 @@ const dockerfileInfoSchema = new Schema({
   month: String,
   last: Boolean,
   date: Date,
+  path: String,
 });
 
 const dockerfileInfo = mongoose.model("dockerfileInfo", dockerfileInfoSchema);

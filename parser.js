@@ -32,6 +32,7 @@ exports.parseDockerfile = function parseDockerfile(dockerfile) {
     month: dockerfile.month,
     last: dockerfile.last,
     date: dockerfile.date,
+    path: dockerfile.path,
   };
 };
 
