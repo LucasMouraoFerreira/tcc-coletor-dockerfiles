@@ -31,7 +31,8 @@ async function collectDockerfiles() {
 
   const totalPages = Math.ceil(totalCount / perPage);
 
-  console.log("\x1b[34m%s\x1b[0m", `Total Pages: ${totalPages}\n`);
+  console.log("\x1b[34m%s\x1b[0m", `Date: ${start}`);
+  console.log("\x1b[34m%s\x1b[0m", `Total Pages: ${totalPages}`);
 
   if (totalPages > 0) {
     for (let index = 1; index <= totalPages; index += 1) {
@@ -45,7 +46,9 @@ async function collectDockerfiles() {
 
           for (let i = 0; i < items.length; i += 1) {
             const repositoryFullName = items[i].full_name;
-            await getRepoInfo(repositoryFullName);
+            if (items[i].fork === false && items[i].stargazers_count >= 50) {
+              await getRepoInfo(items[i]);
+            }
           }
         })
         .catch((err) => console.log(err.message));
@@ -54,7 +57,7 @@ async function collectDockerfiles() {
 }
 
 async function collectLoop() {
-  while (`${currentYear}-${currentMonth}` !== "2021-01") {
+  while (`${currentYear}-${currentMonth}` !== "2020-11") {
     await collectDockerfiles();
   }
 }

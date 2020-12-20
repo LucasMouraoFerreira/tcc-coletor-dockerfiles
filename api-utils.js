@@ -36,60 +36,48 @@ const months = [
   "12",
 ];
 
-exports.getRepoInfo = async function getRepoInfo(repositoryFullName) {
+exports.getRepoInfo = async function getRepoInfo(repository) {
+  const {
+    language,
+    stargazers_count,
+    forks_count,
+    size,
+    full_name,
+    open_issues_count,
+    created_at,
+    updated_at,
+    owner: { type: owner_type },
+  } = repository;
+
+  const repositoryFullName = full_name;
+
   await axios
-    .get(`https://api.github.com/repos/${repositoryFullName}`, options)
+    .get(
+      `https://api.github.com/search/code?q=FROM+repo:${repositoryFullName}+filename:Dockerfile`
+    )
     .then(async (response) => {
-      if (response.data.fork === true || response.data.stargazers_count < 50) {
+      const path = getDockerfilePath(response.data.items);
+      if (!path) {
         return;
       }
-
-      const {
-        language,
-        stargazers_count,
-        forks_count,
-        size,
-        full_name,
-        open_issues_count,
-        created_at,
-        updated_at,
-        owner: { type: owner_type },
-      } = response.data;
-
-      await axios
-        .get(
-          `https://api.github.com/search/code?q=FROM+repo:${repositoryFullName}+filename:Dockerfile`
-        )
-        .then(async (response) => {
-          const path = getDockerfilePath(response.data.items);
-          if (!path) {
-            return;
-          }
-          const dockerfiles = await getDockerfiles(repositoryFullName, path);
-          await save(
-            {
-              language,
-              stargazers_count,
-              forks_count,
-              size,
-              full_name,
-              open_issues_count,
-              owner_type,
-              created_at,
-              updated_at,
-            },
-            dockerfiles
-          );
-        })
-        .catch(() => {
-          console.log(
-            `repositorio ${repositoryFullName} não possui Dockerfile`
-          );
-          return;
-        });
+      const dockerfiles = await getDockerfiles(repositoryFullName, path);
+      await save(
+        {
+          language,
+          stargazers_count,
+          forks_count,
+          size,
+          full_name,
+          open_issues_count,
+          owner_type,
+          created_at,
+          updated_at,
+        },
+        dockerfiles
+      );
     })
-    .catch((err) => {
-      console.log(err);
+    .catch(() => {
+      console.log(`repositorio ${repositoryFullName} não possui Dockerfile`);
       return;
     });
 
@@ -109,7 +97,6 @@ async function getDockerfiles(repositoryFullName, path) {
         let pendingCommits = true;
         let page = 2;
         while (pendingCommits) {
-          console.log(`page: ${page}`);
           await axios
             .get(
               `https://api.github.com/repos/${repositoryFullName}/commits?path=${path}&per_page=100&page=${page}`,
@@ -154,7 +141,6 @@ async function getDockerfilesInfo(commits, path) {
         commitsToAnalyze.push(commit);
         lastMonth = commit.commit.author.date.split("-")[1];
         lastYear = commit.commit.author.date.split("-")[0];
-        console.log(lastYear);
       }
     });
   });
@@ -179,7 +165,6 @@ async function parseDockerfilesInfo(commitsToAnalyze, path) {
       ? path.slice(1)
       : path.split("/");
 
-  console.log(pathNormalize);
   for (const commit of commitsToAnalyze) {
     await axios
       .get(commit.tree, options)
@@ -189,7 +174,6 @@ async function parseDockerfilesInfo(commitsToAnalyze, path) {
             (blob) => blob.path === pathNormalize
           );
           if (blobDockerfile && blobDockerfile.type === "blob") {
-            console.log(blobDockerfile);
             await axios
               .get(blobDockerfile.url, options)
               .then((res) => {
@@ -222,7 +206,6 @@ async function parseDockerfilesInfo(commitsToAnalyze, path) {
                   return;
                 });
             } else if (blobDockerfile && blobDockerfile.type === "blob") {
-              console.log(blobDockerfile);
               await axios
                 .get(blobDockerfile.url, options)
                 .then((res) => {

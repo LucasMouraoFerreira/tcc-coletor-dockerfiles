@@ -13,6 +13,7 @@
   "dependencies": {
     "axios": "^0.20.0",
     "docker-file-parser": "^1.0.5",
-    "mongoose": "^5.10.14"
+    "mongoose": "^5.10.14",
+    "plotly": "^1.0.6"
   }
 }
