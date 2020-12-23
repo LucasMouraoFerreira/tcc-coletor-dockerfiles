@@ -3,6 +3,11 @@ const { parseDockerfile } = require("./parser");
 const { token } = require("./token.json");
 const repoGeneralInfo = require("./database/models/repo-general-info");
 const dockerfileInfo = require("./database/models/dockerfile-info");
+const Bottleneck = require("bottleneck");
+
+const limiter = new Bottleneck({
+  minTime: 1100,
+});
 
 const options = {
   headers: { Authorization: `Token ${token}` },
@@ -53,7 +58,7 @@ exports.getRepoInfo = async function getRepoInfo(repository) {
 
   await axios
     .get(
-      `https://api.github.com/search/code?q=FROM+repo:${repositoryFullName}+filename:Dockerfile`
+      `https://api.github.com/search/code?q=FROM+repo:${repositoryFullName}+language:Dockerfile`
     )
     .then(async (response) => {
       const path = getDockerfilePath(response.data.items);
@@ -97,24 +102,26 @@ async function getDockerfiles(repositoryFullName, path) {
         let pendingCommits = true;
         let page = 2;
         while (pendingCommits) {
-          await axios
-            .get(
-              `https://api.github.com/repos/${repositoryFullName}/commits?path=${path}&per_page=100&page=${page}`,
-              options
-            )
-            .then((res) => {
-              commits = commits.concat(res.data);
-              if (res.data.length < 100) {
-                pendingCommits = false;
-              }
-              page += 1;
-            })
-            .catch(() => {
-              console.log(
-                `Erro ao ler commits do Dockerfile - ${repositoryFullName}`
-              );
-              return;
-            });
+          await limiter.schedule(() =>
+            axios
+              .get(
+                `https://api.github.com/repos/${repositoryFullName}/commits?path=${path}&per_page=100&page=${page}`,
+                options
+              )
+              .then((res) => {
+                commits = commits.concat(res.data);
+                if (res.data.length < 100) {
+                  pendingCommits = false;
+                }
+                page += 1;
+              })
+              .catch(() => {
+                console.log(
+                  `Erro ao ler commits do Dockerfile - ${repositoryFullName}`
+                );
+                return;
+              })
+          );
         }
       }
     })
@@ -166,70 +173,78 @@ async function parseDockerfilesInfo(commitsToAnalyze, path) {
       : path.split("/");
 
   for (const commit of commitsToAnalyze) {
-    await axios
-      .get(commit.tree, options)
-      .then(async (response) => {
-        if (!Array.isArray(pathNormalize)) {
-          const blobDockerfile = response.data.tree.find(
-            (blob) => blob.path === pathNormalize
-          );
-          if (blobDockerfile && blobDockerfile.type === "blob") {
-            await axios
-              .get(blobDockerfile.url, options)
-              .then((res) => {
-                dockerfiles.push({
-                  year: commit.year,
-                  month: commit.month,
-                  last: commit.last,
-                  date: commit.date,
-                  path,
-                  dockerfile: decodeDockerfile(res.data.content),
-                });
-              })
-              .catch(() => {
-                console.log(`Erro ao ler blob do Dockerfile`);
-                return;
-              });
-          }
-        } else {
-          let nextTree = response.data.tree;
-          for (const name of pathNormalize) {
-            const blobDockerfile = nextTree.find((blob) => blob.path === name);
-            if (blobDockerfile && blobDockerfile.type === "tree") {
-              await axios
-                .get(blobDockerfile.url, options)
-                .then((res) => {
-                  nextTree = res.data.tree;
-                })
-                .catch(() => {
-                  console.log(`Erro ao ler tree do Dockerfile`);
-                  return;
-                });
-            } else if (blobDockerfile && blobDockerfile.type === "blob") {
-              await axios
-                .get(blobDockerfile.url, options)
-                .then((res) => {
-                  dockerfiles.push({
-                    year: commit.year,
-                    month: commit.month,
-                    last: commit.last,
-                    date: commit.date,
-                    path,
-                    dockerfile: decodeDockerfile(res.data.content),
+    await limiter.schedule(() =>
+      axios
+        .get(commit.tree, options)
+        .then(async (response) => {
+          if (!Array.isArray(pathNormalize)) {
+            const blobDockerfile = response.data.tree.find(
+              (blob) => blob.path === pathNormalize
+            );
+            if (blobDockerfile && blobDockerfile.type === "blob") {
+              await limiter.schedule(() =>
+                axios
+                  .get(blobDockerfile.url, options)
+                  .then((res) => {
+                    dockerfiles.push({
+                      year: commit.year,
+                      month: commit.month,
+                      last: commit.last,
+                      date: commit.date,
+                      path,
+                      dockerfile: decodeDockerfile(res.data.content),
+                    });
+                  })
+                  .catch(() => {
+                    console.log(`Erro ao ler blob do Dockerfile`);
+                    return;
+                  })
+              );
+            }
+          } else {
+            let nextTree = response.data.tree;
+            for (const name of pathNormalize) {
+              const blobDockerfile = nextTree.find(
+                (blob) => blob.path === name
+              );
+              if (blobDockerfile && blobDockerfile.type === "tree") {
+                await limiter.schedule(() =>
+                  axios
+                    .get(blobDockerfile.url, options)
+                    .then((res) => {
+                      nextTree = res.data.tree;
+                    })
+                    .catch(() => {
+                      console.log(`Erro ao ler tree do Dockerfile`);
+                      return;
+                    })
+                );
+              } else if (blobDockerfile && blobDockerfile.type === "blob") {
+                await axios
+                  .get(blobDockerfile.url, options)
+                  .then((res) => {
+                    dockerfiles.push({
+                      year: commit.year,
+                      month: commit.month,
+                      last: commit.last,
+                      date: commit.date,
+                      path,
+                      dockerfile: decodeDockerfile(res.data.content),
+                    });
+                  })
+                  .catch(() => {
+                    console.log(`Erro ao ler blob do Dockerfile`);
+                    return;
                   });
-                })
-                .catch(() => {
-                  console.log(`Erro ao ler blob do Dockerfile`);
-                  return;
-                });
+              }
             }
           }
-        }
-      })
-      .catch(() => {
-        console.log(`Erro ao ler tree do Dockerfile`);
-        return;
-      });
+        })
+        .catch(() => {
+          console.log(`Erro ao ler tree do Dockerfile`);
+          return;
+        })
+    );
   }
 
   return dockerfiles.map((dockerfile) => parseDockerfile(dockerfile));
@@ -242,11 +257,21 @@ function decodeDockerfile(content) {
 }
 
 async function save(repoInfo, dockerfiles) {
-  console.log(dockerfiles.length);
-  console.log(repoInfo.full_name);
-  const generalInfo = await repoGeneralInfo.create(repoInfo);
-  for (const dockerfile of dockerfiles) {
-    await dockerfileInfo.create({ repoInfo: generalInfo._id, ...dockerfile });
+  if (
+    dockerfiles.length >= 1 &&
+    dockerfiles.find((x) => x.dockerfile.length >= 1)
+  ) {
+    console.log(repoInfo.full_name);
+    console.log(dockerfiles.length);
+    const generalInfo = await repoGeneralInfo.create(repoInfo);
+    for (const dockerfile of dockerfiles) {
+      if (dockerfile.dockerfile.length >= 1) {
+        await dockerfileInfo.create({
+          repoInfo: generalInfo._id,
+          ...dockerfile,
+        });
+      }
+    }
   }
 }
 

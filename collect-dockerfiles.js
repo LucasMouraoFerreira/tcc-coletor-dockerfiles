@@ -3,12 +3,16 @@
 const axios = require("axios");
 const { returnStartEndQueryDates } = require("./utils.js");
 const { getRepoInfo, options } = require("./api-utils");
+const Bottleneck = require("bottleneck");
 
 const perPage = 100;
-let totalCount = 1;
 let currentYear = 2013;
 let currentMonth = 2;
 let currentDay = 20;
+
+const limiter = new Bottleneck({
+  minTime: 15000,
+});
 
 async function collectDockerfiles() {
   const { nextDay, nextMonth, nextYear, start, end } = returnStartEndQueryDates(
@@ -17,6 +21,7 @@ async function collectDockerfiles() {
     currentDay
   );
 
+  let totalCount = 1;
   currentYear = nextYear;
   currentMonth = nextMonth;
   currentDay = nextDay;
@@ -47,7 +52,7 @@ async function collectDockerfiles() {
           for (let i = 0; i < items.length; i += 1) {
             const repositoryFullName = items[i].full_name;
             if (items[i].fork === false && items[i].stargazers_count >= 50) {
-              await getRepoInfo(items[i]);
+              await limiter.schedule(() => getRepoInfo(items[i]));
             }
           }
         })
