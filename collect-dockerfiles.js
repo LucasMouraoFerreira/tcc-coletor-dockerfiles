@@ -50,7 +50,6 @@ async function collectDockerfiles() {
           const items = response.data.items;
 
           for (let i = 0; i < items.length; i += 1) {
-            const repositoryFullName = items[i].full_name;
             if (items[i].fork === false && items[i].stargazers_count >= 50) {
               await limiter.schedule(() => getRepoInfo(items[i]));
             }

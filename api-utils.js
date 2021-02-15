@@ -26,21 +26,6 @@ const validYears = [
   "2020",
 ];
 
-const months = [
-  "01",
-  "02",
-  "03",
-  "04",
-  "05",
-  "06",
-  "07",
-  "08",
-  "09",
-  "10",
-  "11",
-  "12",
-];
-
 exports.getRepoInfo = async function getRepoInfo(repository) {
   const {
     language,
@@ -61,12 +46,13 @@ exports.getRepoInfo = async function getRepoInfo(repository) {
       `https://api.github.com/search/code?q=FROM+repo:${repositoryFullName}+language:Dockerfile`
     )
     .then(async (response) => {
-      const path = getDockerfilePath(response.data.items);
-      if (!path) {
+      const paths = getDockerfilePath(response.data.items);
+      if (!paths) {
         return;
       }
-      const dockerfiles = await getDockerfiles(repositoryFullName, path);
-      await save(
+      for(const path of paths){
+        const dockerfiles = await getDockerfiles(repositoryFullName, path);
+        await save(
         {
           language,
           stargazers_count,
@@ -78,8 +64,9 @@ exports.getRepoInfo = async function getRepoInfo(repository) {
           created_at,
           updated_at,
         },
-        dockerfiles
-      );
+          dockerfiles
+        );
+      }      
     })
     .catch(() => {
       console.log(`repositorio ${repositoryFullName} não possui Dockerfile`);
@@ -136,20 +123,15 @@ async function getDockerfiles(repositoryFullName, path) {
 async function getDockerfilesInfo(commits, path) {
   const commitsToAnalyze = [];
   let lastYear;
-  let lastMonth;
   validYears.forEach((year) => {
-    months.forEach((month) => {
-      const commit = commits.find(
-        (com) =>
-          com.commit.author.date.split("-")[0] === year &&
-          com.commit.author.date.split("-")[1] === month
-      );
-      if (commit) {
-        commitsToAnalyze.push(commit);
-        lastMonth = commit.commit.author.date.split("-")[1];
-        lastYear = commit.commit.author.date.split("-")[0];
-      }
-    });
+    const commit = commits.find(
+      (com) =>
+        com.commit.author.date.split("-")[0] === year
+    );
+    if (commit) {
+      commitsToAnalyze.push(commit);
+      lastYear = commit.commit.author.date.split("-")[0];
+    }
   });
 
   const commitsToReturn = commitsToAnalyze.map((com) => ({
@@ -157,9 +139,7 @@ async function getDockerfilesInfo(commits, path) {
     month: com.commit.author.date.split("-")[1],
     date: com.commit.author.date,
     tree: com.commit.tree.url,
-    last:
-      com.commit.author.date.split("-")[0] === lastYear &&
-      com.commit.author.date.split("-")[1] === lastMonth,
+    last: com.commit.author.date.split("-")[0] === lastYear,
   }));
 
   return parseDockerfilesInfo(commitsToReturn, path);
@@ -261,8 +241,7 @@ async function save(repoInfo, dockerfiles) {
     dockerfiles.length >= 1 &&
     dockerfiles.find((x) => x.dockerfile.length >= 1)
   ) {
-    console.log(repoInfo.full_name);
-    console.log(dockerfiles.length);
+    console.log(repoInfo.full_name, dockerfiles[0].path, dockerfiles.length);
     const generalInfo = await repoGeneralInfo.create(repoInfo);
     for (const dockerfile of dockerfiles) {
       if (dockerfile.dockerfile.length >= 1) {
@@ -281,27 +260,5 @@ function getDockerfilePath(items) {
     return undefined;
   }
 
-  //Dockerfile na raiz do projeto com nome "Dockerfile"
-  let dockerfilePath = items.find((x) => x.path === "/Dockerfile");
-
-  if (dockerfilePath) {
-    return dockerfilePath.path;
-  }
-
-  //Dockerfile na raiz do projeto mas com nome diferente
-  dockerfilePath = items.find((x) => x.path.split("/").length === 2);
-
-  if (dockerfilePath) {
-    return dockerfilePath.path;
-  }
-
-  //Dockerfile em qualquer diretorio mas com nome "Dockerfile"
-  dockerfilePath = items.find((x) => x.path.split("/").pop() === "Dockerfile");
-
-  if (dockerfilePath) {
-    return dockerfilePath.path;
-  }
-
-  //Qualque Dockerfile
-  return items[0].path;
+  return items.map((x) => x.path)
 }
