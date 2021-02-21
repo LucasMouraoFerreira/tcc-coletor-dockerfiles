@@ -36,6 +36,16 @@ exports.parseDockerfile = function parseDockerfile(dockerfile) {
   };
 };
 
+exports.reverseParse = function reverseParse(dockerfileArray) {
+  if (!dockerfileArray) {
+    return undefined;
+  }
+  return dockerfileArray.reduce(
+    (prev, curr) => (curr.raw ? prev + curr.raw + "\n" : prev),
+    ""
+  );
+};
+
 // informações para retirar do repositorio
 // fork? define se repositorio é um fork, language, stargazers_count, forks_count, size, full_name, owner.type ['User','Organization']
 // https://api.github.com/repos/LucasMouraoFerreira/Aircnc

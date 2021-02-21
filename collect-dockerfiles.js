@@ -61,7 +61,7 @@ async function collectDockerfiles() {
 }
 
 async function collectLoop() {
-  while (`${currentYear}-${currentMonth}` !== "2020-11") {
+  while (`${currentYear}` !== "2021") {
     await collectDockerfiles();
   }
 }

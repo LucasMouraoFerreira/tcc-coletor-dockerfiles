@@ -50,9 +50,12 @@ exports.getRepoInfo = async function getRepoInfo(repository) {
       if (!paths) {
         return;
       }
-      for(const path of paths){
-        const dockerfiles = await getDockerfiles(repositoryFullName, path);
-        await save(
+      const dockerfiles = [];
+      for (const path of paths) {
+        const dockerfilesPath = await getDockerfiles(repositoryFullName, path);
+        dockerfiles.push(...dockerfilesPath);
+      }
+      await save(
         {
           language,
           stargazers_count,
@@ -64,9 +67,8 @@ exports.getRepoInfo = async function getRepoInfo(repository) {
           created_at,
           updated_at,
         },
-          dockerfiles
-        );
-      }      
+        dockerfiles
+      );
     })
     .catch(() => {
       console.log(`repositorio ${repositoryFullName} não possui Dockerfile`);
@@ -125,8 +127,7 @@ async function getDockerfilesInfo(commits, path) {
   let lastYear;
   validYears.forEach((year) => {
     const commit = commits.find(
-      (com) =>
-        com.commit.author.date.split("-")[0] === year
+      (com) => com.commit.author.date.split("-")[0] === year
     );
     if (commit) {
       commitsToAnalyze.push(commit);
@@ -239,9 +240,9 @@ function decodeDockerfile(content) {
 async function save(repoInfo, dockerfiles) {
   if (
     dockerfiles.length >= 1 &&
-    dockerfiles.find((x) => x.dockerfile.length >= 1)
+    dockerfiles.some((x) => x.dockerfile.length >= 1)
   ) {
-    console.log(repoInfo.full_name, dockerfiles[0].path, dockerfiles.length);
+    console.log(repoInfo.full_name, dockerfiles.length);
     const generalInfo = await repoGeneralInfo.create(repoInfo);
     for (const dockerfile of dockerfiles) {
       if (dockerfile.dockerfile.length >= 1) {
@@ -255,10 +256,9 @@ async function save(repoInfo, dockerfiles) {
 }
 
 function getDockerfilePath(items) {
-  //Não possui Dockerfile
   if (items.length === 0) {
     return undefined;
   }
 
-  return items.map((x) => x.path)
+  return items.map((x) => x.path);
 }

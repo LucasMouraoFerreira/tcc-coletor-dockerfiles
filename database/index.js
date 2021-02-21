@@ -3,6 +3,6 @@ mongoose.set("useNewUrlParser", true);
 mongoose.set("useFindAndModify", false);
 mongoose.set("useCreateIndex", true);
 mongoose.set("useUnifiedTopology", true);
-mongoose.connect("mongodb://localhost/tcc-dev");
+mongoose.connect("mongodb://localhost/tcc-prod");
 
 module.exports = mongoose;

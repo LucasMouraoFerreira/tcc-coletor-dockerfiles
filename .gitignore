@@ -1,5 +1,5 @@
 /arquivos-coletados
-/node_modules
+/node_modules/*
 /package-lock.json
 /token.json
-/plotly.js
+!node_modules/dockerfilelint
